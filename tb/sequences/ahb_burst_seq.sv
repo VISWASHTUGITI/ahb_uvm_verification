@@ -14,12 +14,10 @@ class ahb_write_read_seq extends ahb_base_seq;
     rd=ahb_single_read_seq::type_id::create("rd");
     rd.use_fixed=1; rd.target_addr=test_addr;
     rd.start(m_sequencer);
-    if(rd.rdata===test_data)
-      `uvm_info("SEQ",$sformatf("MATCH: A=0x%08h W=0x%08h R=0x%08h",
-        test_addr,test_data,rd.rdata),UVM_LOW)
-    else
-      `uvm_error("SEQ",$sformatf("MISMATCH: A=0x%08h W=0x%08h R=0x%08h",
-        test_addr,test_data,rd.rdata))
+    // Read data is captured and checked by the MONITOR + SCOREBOARD (the single
+    // source of truth); the driver no longer reads data back. Log an
+    // informational message only.
+    `uvm_info("SEQ",$sformatf("Issued WR then RD at A=0x%08h; read-back verified by scoreboard",test_addr),UVM_LOW)
   endtask
 endclass
 

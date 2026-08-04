@@ -36,39 +36,35 @@ class ahb_driver extends uvm_driver #(ahb_seq_item);
     beat_addr = req.addr;
 
     @(posedge vif.HCLK);
-    vif.HSEL   <= 1'b1;     vif.HADDR  <= beat_addr;
-    vif.HWRITE <= req.hwrite; vif.HSIZE  <= req.hsize;
-    vif.HBURST <= req.hburst; vif.HPROT  <= req.hprot;
-    vif.HMASTLOCK <= 1'b0;   vif.HTRANS <= 2'b10;
+    vif.drv_cb.HSEL   <= 1'b1;     vif.drv_cb.HADDR  <= beat_addr;
+    vif.drv_cb.HWRITE <= req.hwrite; vif.drv_cb.HSIZE  <= req.hsize;
+    vif.drv_cb.HBURST <= req.hburst; vif.drv_cb.HPROT  <= req.hprot;
+    vif.drv_cb.HMASTLOCK <= 1'b0;  vif.drv_cb.HTRANS <= 2'b10;
 
     for (int beat = 0; beat < req.num_beats; beat++) begin
       beat_addr = beat_addr + addr_inc;
       @(posedge vif.HCLK);
       if (req.hwrite)
-        vif.HWDATA <= req.write_data + (beat * 32'h100);
+        vif.drv_cb.HWDATA <= req.write_data + (beat * 32'h100);
       if (beat < req.num_beats - 1) begin
-        vif.HSEL   <= 1'b1;     vif.HADDR  <= beat_addr;
-        vif.HWRITE <= req.hwrite; vif.HSIZE  <= req.hsize;
-        vif.HBURST <= req.hburst; vif.HTRANS <= 2'b11;
+        vif.drv_cb.HSEL   <= 1'b1;  vif.drv_cb.HADDR  <= beat_addr;
+        vif.drv_cb.HWRITE <= req.hwrite; vif.drv_cb.HSIZE  <= req.hsize;
+        vif.drv_cb.HBURST <= req.hburst; vif.drv_cb.HTRANS <= 2'b11;
       end else begin
-        vif.HTRANS <= 2'b00; vif.HSEL <= 1'b0;
-        vif.HADDR  <= 32'h0; vif.HWRITE <= 1'b0;
+        vif.drv_cb.HTRANS <= 2'b00; vif.drv_cb.HSEL <= 1'b0;
+        vif.drv_cb.HADDR  <= 32'h0; vif.drv_cb.HWRITE <= 1'b0;
       end
     end
 
-    if (!req.hwrite) begin
-      @(posedge vif.HCLK);
-      @(posedge vif.HCLK);
-      req.read_data = vif.HRDATA;
-      req.hresp     = vif.HRESP;
-    end else begin
-      @(posedge vif.HCLK);
-    end
+    // Note: the driver does NOT sample read data. Read data is captured by the
+    // MONITOR (on the clocking block edge) and checked by the SCOREBOARD, which
+    // is the single source of truth. The driver only drives the bus, so no
+    // fragile @(posedge) cycle-counting for read data is needed here.
   endtask
 
   task set_idle();
-    vif.HTRANS<=2'b00; vif.HSEL<=1'b0; vif.HADDR<=32'h0;
-    vif.HWRITE<=1'b0; vif.HWDATA<=32'h0; vif.HSIZE<=3'b010;
-    vif.HBURST<=3'b000; vif.HPROT<=4'b0011; vif.HMASTLOCK<=1'b0;
+    vif.drv_cb.HTRANS<=2'b00; vif.drv_cb.HSEL<=1'b0; vif.drv_cb.HADDR<=32'h0;
+    vif.drv_cb.HWRITE<=1'b0; vif.drv_cb.HWDATA<=32'h0; vif.drv_cb.HSIZE<=3'b010;
+    vif.drv_cb.HBURST<=3'b000; vif.drv_cb.HPROT<=4'b0011; vif.drv_cb.HMASTLOCK<=1'b0;
   endtask
 endclass

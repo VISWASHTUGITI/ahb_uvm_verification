@@ -300,6 +300,21 @@ A VCD file `dump.vcd` is generated automatically. Open it in GTKWave or your sim
 
 ---
 
+## Verification Correctness Notes
+
+- **Per-beat burst verification.** The monitor captures the **address and data of
+  every beat** of a burst (`beat_addr_q`, `beat_wdata_q`, `beat_rdata_q`), and the
+  scoreboard stores/checks **each beat against its own address**. This means burst
+  transactions are genuinely verified beat-by-beat instead of only the last beat
+  being compared at the first beat's address.
+- **Beat count derived from the bus.** The monitor derives the number of beats from
+  the actual `HTRANS` sequence (`NONSEQ` + following `SEQ` beats), rather than from a
+  fixed table. This makes `INCR` bursts (1–4 beats) consistent between the driver and
+  the monitor.
+- **AHB pipeline-aligned sampling.** Write data is sampled in the cycle following its
+  address phase and read data one cycle later, matching the zero-wait-state slave's
+  registered timing model.
+
 ## Future Improvements
 
 - [ ] Add wait-state injection (variable `HREADYOUT`) to test multi-cycle slave responses

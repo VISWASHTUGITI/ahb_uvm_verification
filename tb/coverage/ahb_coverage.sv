@@ -24,7 +24,11 @@ class ahb_coverage extends uvm_subscriber #(ahb_seq_item);
       bins others   = default;
     }
     cp_beats: coverpoint t.num_beats {
-      bins one={1}; bins four={4}; bins eight={8};
+      bins one   = {1};
+      bins two   = {2};
+      bins three = {3};
+      bins four  = {4};
+      bins eight = {8};
     }
     cx_dir_burst: cross cp_direction, cp_burst;
     cx_dir_size:  cross cp_direction, cp_size;

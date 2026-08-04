@@ -4,7 +4,6 @@ class ahb_single_read_seq extends ahb_base_seq;
   `uvm_object_utils(ahb_single_read_seq)
   logic [31:0] target_addr=32'h0;
   bit use_fixed=0;
-  logic [31:0] rdata;
   function new(string name="ahb_single_read_seq"); super.new(name); endfunction
   task body();
     ahb_seq_item item = ahb_seq_item::type_id::create("srd");
@@ -15,7 +14,8 @@ class ahb_single_read_seq extends ahb_base_seq;
           if(local::use_fixed) { addr==local::target_addr; }
         }) `uvm_fatal("SEQ","RD rand fail")
     finish_item(item);
-    rdata = item.read_data;
+    // Read data is verified by the monitor + scoreboard; the driver does not
+    // capture read data back.
   endtask
 endclass
 

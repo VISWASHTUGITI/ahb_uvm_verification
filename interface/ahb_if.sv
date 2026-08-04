@@ -22,12 +22,42 @@ interface ahb_if #(
   logic                  HREADYOUT;
   logic [1:0]            HRESP;
 
+  // ---------------------------------------------------------------------
+  // Clocking blocks. These eliminate race conditions around the clock edge
+  // by using the SystemVerilog event scheduler's skew controls:
+  //
+  //   drv_cb (driver): outputs are driven with "output #1" (1 time unit AFTER
+  //                    the posedge) and inputs are sampled "input #1step"
+  //                    (just BEFORE the edge). So a value the master drives at
+  //                    edge N is only *seen* by the DUT at edge N+1, and the
+  //                    DUT never races against the freshly-driven value.
+  //   mon_cb (monitor): samples all signals "input #1step" (just BEFORE the
+  //                     edge), so it always captures the stable pre-edge value
+  //                     and never sees same-edge NBA updates.
+  //
+  // This is the standard UVM way to avoid the "sample at the same posedge you
+  // drove" ambiguity.
+  // ---------------------------------------------------------------------
+  clocking drv_cb @(posedge HCLK);
+    default input #1step output #1;
+    output HADDR, HTRANS, HWRITE, HSIZE, HBURST, HPROT, HMASTLOCK, HSEL, HWDATA;
+    input  HRDATA, HREADY, HREADYOUT, HRESP;
+  endclocking
+
+  clocking mon_cb @(posedge HCLK);
+    default input #1step;
+    input HADDR, HTRANS, HWRITE, HSIZE, HBURST, HPROT, HMASTLOCK, HSEL,
+          HWDATA, HRDATA, HREADY, HREADYOUT, HRESP;
+  endclocking
+
   modport DRIVER_MP (
+    clocking drv_cb,
     input  HCLK, HRESETn, HRDATA, HREADY, HREADYOUT, HRESP,
     output HADDR, HTRANS, HWRITE, HSIZE, HBURST, HPROT, HMASTLOCK, HWDATA, HSEL
   );
 
   modport MONITOR_MP (
+    clocking mon_cb,
     input HCLK, HRESETn,
     input HADDR, HTRANS, HWRITE, HSIZE, HBURST, HPROT, HMASTLOCK, HSEL,
     input HWDATA, HRDATA, HREADY, HREADYOUT, HRESP
