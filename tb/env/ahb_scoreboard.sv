@@ -16,29 +16,37 @@ class ahb_scoreboard extends uvm_scoreboard;
   endfunction
 
   function void write(ahb_seq_item t);
+    int i;
     logic [31:0] wa;
     if(t.hresp!=2'b00) begin
       total_err++;
       `uvm_error("SB",$sformatf("BUS ERR A=0x%08h",t.addr))
       return;
     end
-    wa = {t.addr[31:2], 2'b00};
     if(t.hwrite) begin
-      ref_mem[wa] = t.write_data;
-      total_wr++;
-    end else begin
-      total_rd++;
-      if(!ref_mem.exists(wa)) begin
-        `uvm_warning("SB",$sformatf("RD uninit [0x%08h]",wa))
-        return;
+      // Store EVERY beat's write data at its OWN address.
+      for(i=0; i<t.n_captured; i++) begin
+        wa = {t.beat_addr_q[i][31:2], 2'b00};
+        ref_mem[wa] = t.beat_wdata_q[i];
+        total_wr++;
       end
-      if(t.read_data===ref_mem[wa]) begin
-        total_pass++;
-        `uvm_info("SB",$sformatf("PASS [0x%08h] exp=0x%08h",wa,ref_mem[wa]),UVM_MEDIUM)
-      end else begin
-        total_fail++;
-        `uvm_error("SB",$sformatf("FAIL [0x%08h] exp=0x%08h got=0x%08h",
-          wa,ref_mem[wa],t.read_data))
+    end else begin
+      // Compare EVERY beat's read data against its OWN address.
+      for(i=0; i<t.n_captured; i++) begin
+        wa = {t.beat_addr_q[i][31:2], 2'b00};
+        total_rd++;
+        if(!ref_mem.exists(wa)) begin
+          `uvm_warning("SB",$sformatf("RD uninit [0x%08h]",wa))
+          continue;
+        end
+        if(t.beat_rdata_q[i]===ref_mem[wa]) begin
+          total_pass++;
+          `uvm_info("SB",$sformatf("PASS [0x%08h] exp=0x%08h",wa,ref_mem[wa]),UVM_MEDIUM)
+        end else begin
+          total_fail++;
+          `uvm_error("SB",$sformatf("FAIL [0x%08h] exp=0x%08h got=0x%08h",
+            wa,ref_mem[wa],t.beat_rdata_q[i]))
+        end
       end
     end
   endfunction

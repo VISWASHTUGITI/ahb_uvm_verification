@@ -67,10 +67,19 @@ module ahb_slave_mem #(
     end
   end
 
-  always_ff @(posedge HCLK or negedge HRESETn) begin
-    if(!HRESETn) HRDATA<='0;
-    else if(rd_en_d) HRDATA <= mem[waddr];
+  // READ DATA PHASE (combinational, proper AHB pipelining).
+  // AHB 2-phase pipeline: the address is sampled during the address phase and
+  // the read data is presented combinationally during the data phase (the cycle
+  // after the address is sampled). So HRDATA is derived directly from the
+  // registered address (addr_d) and read-enable (rd_en_d) -- NO extra registered
+  // cycle on the read output. This makes the read data valid at the correct edge
+  // so the master can sample it one edge after the address was presented.
+  logic [DATA_WIDTH-1:0] rdata_comb;
+  always_comb begin
+    if (rd_en_d) rdata_comb = mem[waddr];
+    else         rdata_comb = '0;
   end
+  assign HRDATA = rdata_comb;
 
   assign HREADYOUT = 1'b1;
   assign HRESP     = 2'b00;
